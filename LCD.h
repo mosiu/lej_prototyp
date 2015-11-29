@@ -6,46 +6,50 @@
 //********************** M A K R A *******************************
 
 // LCD
-
-#define CLEAR_LCD	hd44780_outcmd(HD44780_CLR); \
-					hd44780_wait_ready(1); \
-					adres = 0;
 					
-#define SEND_DATA(iks)	hd44780_outdata((iks)); \
-						hd44780_wait_ready(0); \
-						adres++;
-						
-#define SET_ADDR(iks)	hd44780_outcmd(HD44780_DDADDR((iks))); \
-						hd44780_wait_ready(0); \
-						adres = (iks);
-
-#define REPRINT_LN 	lcd_putsub(0); \
-					lcd_putsub( flg.czy_wypelnienie ? linia2 : linia1 );
-
-// klawiatura
-#define STATIC_RESET	input = 0; 
 
 
-//extern volatile uint8_t adres;	//zawsze adres pierwszego wolnego znaku LCD
+typedef enum {
+	ADC_STATE,
+	TIME_COUNTER_STATE
+	} state_t;
 
 //********************** F U N K C J E ***********************
+
+void LCD_clear(void);
+
+void LCD_newline(void);
+
 /*
 Inicjalizuje LCD
 */
-void init_lcd(void);
+void LCD_init(void);
 /*
 Wysyla napis zawarty w C-stringu do LCD, '\n' zmienia linie, '\r' maze aktualna i wraca do pocz.
 */  
-void lcd_putsub(char* sub);
+void LCD_putsub(char* sub);
 
 /*
 Wyswietla liczbe 0 - 65535
 */
-void  display_number(uint16_t liczba);
+void  LCD_display_number(uint16_t liczba);
 
 /*
-Wyswietla ladnie sformatowany czas
+To be called from SysTick ISR.
 */
-void display_time(const uint16_t * time);
+void LCD_tick(void);
+
+/*
+To be called from main. Responsible for changing displayed time every 0.1s
+*/
+void LCD_refresh(void);
+
+/*
+Switches application state.
+*/
+void LCD_switch_state();
+
+
+state_t LCD_get_state(void);
 
 #endif // LCD_H_

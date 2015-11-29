@@ -11,11 +11,7 @@ This part of header contains definitions that specify the way of LCD connection 
 
 #define USE_BUSY_BIT 0
 
-
-
-#define LED_PORT	PORTC
-#define LED_DDR		DDRC
-#define LED_PIN		PC0
+#define F_CPU 1000000u
 
 
 

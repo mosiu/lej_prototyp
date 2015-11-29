@@ -1,18 +1,24 @@
 #include "LCD.h"
+#include "fun.h"
 #include <stdbool.h>
 
+#define SEND_DATA(iks)	hd44780_outdata((iks)); \
+						hd44780_wait_ready(0); \
+						Address++;
+
+#define SET_ADDR(iks)	hd44780_outcmd(HD44780_DDADDR((iks))); \
+						hd44780_wait_ready(0); \
+						Address = (iks);
 
 /*
 Definiuje znak w CGRAM na pozycji pos
 */
-void lcd_def_char(uint8_t pos, const uint8_t * char_tab);
+void def_char(uint8_t pos, const uint8_t * char_tab);
 
 /*
-Wyswietla jedna duza cyfre (na 4 segmenty lcd)
+Wyswietla ladnie sformatowany czas
 */
-void lcd_disp_number();
-
-void display_digit(uint8_t digit);
+void display_time(const uint16_t * time);
 
 typedef struct {
 	uint8_t a[8];
@@ -369,40 +375,45 @@ static const uint8_t large_digit_tab[10][32] = {
 	}
 };
 
-static const uint8_t tccr2_prescaler_mask = _BV(CS22);
-
 static digit_t LargeDigit[10];
 
-static volatile uint8_t adres = 0;	//zawsze adres pierwszego wolnego znaku LCD
+state_t AppState = TIME_COUNTER_STATE;
+
+static volatile uint8_t Address = 0;	//zawsze adres pierwszego wolnego znaku LCD
+
+static uint8_t If0_01secPassed = 0u;
+
+static uint8_t if_tc_entry = 1u; // IMPORTANT!!
+static uint8_t if_adc_entry = 0u;
 
 
-void lcd_putsub(char* sub)
+void LCD_putsub(char* sub)
 {
 	
 	if (!sub)
 	{
-		if (adres >= 0x40)
-		{ adres = 0x40; }
+		if (Address >= 0x40)
+		{ Address = 0x40; }
 		else
-		{ adres = 0; }
-		SET_ADDR(adres)
+		{ Address = 0; }
+		SET_ADDR(Address)
 		
-		lcd_putsub("                ");
+		LCD_putsub("                ");
 		
-		if (adres >= 0x40)
-		{	adres = 0x40;	}
+		if (Address >= 0x40)
+		{	Address = 0x40;	}
 		else
-		{	adres = 0;	}
-		SET_ADDR(adres)
+		{	Address = 0;	}
+		SET_ADDR(Address)
 	}
 	else
 	{
-		for(uint8_t i=0; (sub[i] != '\0') && (adres <= 0x80) ; i++)
+		for(uint8_t i=0; (sub[i] != '\0') && (Address <= 0x80) ; i++)
 		{
 			if((sub[i])=='\n')
 			{
-				adres = 0x40;
-				SET_ADDR(adres)
+				Address = 0x40;
+				SET_ADDR(Address)
 				continue;
 			}
 			SEND_DATA(sub[i])
@@ -411,8 +422,29 @@ void lcd_putsub(char* sub)
 	return;
 }
 
-void  display_number(uint16_t number)
+void LCD_newline(void)
 {
+	if (Address >= 0x40)
+	{ Address = 0x00; }
+	else
+	{ Address = 0x40; }
+	SET_ADDR(Address)
+}
+
+void LCD_clear(void)
+{
+	hd44780_outcmd(HD44780_CLR);
+	hd44780_wait_ready(1);
+	SET_ADDR(0x00)
+}
+
+void  LCD_display_number(uint16_t number)
+{
+	if (!number)
+	{
+		SEND_DATA(48)
+		return;
+	}
 	uint8_t digit;
 	// poczatek jest bool z zastosowania
 	uint8_t poczatek = false;
@@ -430,10 +462,6 @@ void  display_number(uint16_t number)
 	}
 }
 
-inline void display_digit(uint8_t digit)
-{
-	
-}
 
 void display_time(const uint16_t * time)
 {
@@ -453,14 +481,14 @@ void display_time(const uint16_t * time)
 	time_copy %=100;
 	second_large_idx = time_copy/10;
 	
-	lcd_def_char(0, LargeDigit[first_large_idx].output.a);
-	lcd_def_char(1, LargeDigit[first_large_idx].output.b);
-	lcd_def_char(2, LargeDigit[second_large_idx].output.a);
-	lcd_def_char(3, LargeDigit[second_large_idx].output.b);
-	lcd_def_char(4, LargeDigit[first_large_idx].output.c);
-	lcd_def_char(5, LargeDigit[first_large_idx].output.d);
-	lcd_def_char(6, LargeDigit[second_large_idx].output.c);
-	lcd_def_char(7, LargeDigit[second_large_idx].output.d);
+	def_char(0, LargeDigit[first_large_idx].output.a);
+	def_char(1, LargeDigit[first_large_idx].output.b);
+	def_char(2, LargeDigit[second_large_idx].output.a);
+	def_char(3, LargeDigit[second_large_idx].output.b);
+	def_char(4, LargeDigit[first_large_idx].output.c);
+	def_char(5, LargeDigit[first_large_idx].output.d);
+	def_char(6, LargeDigit[second_large_idx].output.c);
+	def_char(7, LargeDigit[second_large_idx].output.d);
 	
 	// display upper line
 	SET_ADDR(0x02)
@@ -481,7 +509,7 @@ void display_time(const uint16_t * time)
 }
 
 // CAUTION! Everytime you call this, the DDRAM address needs to be set again
-void lcd_def_char(uint8_t pos, const uint8_t * char_tab)
+void def_char(uint8_t pos, const uint8_t * char_tab)
 {	
 	hd44780_outcmd(HD44780_CGADDR(pos*8));
 	hd44780_wait_ready(0);
@@ -493,7 +521,7 @@ void lcd_def_char(uint8_t pos, const uint8_t * char_tab)
 	}
 }
 
-void init_lcd(void)
+void LCD_init(void)
 {
 	hd44780_init();
 	
@@ -514,4 +542,69 @@ void init_lcd(void)
 			LargeDigit[i].input[j] = large_digit_tab[i][j];
 		}
 	}
+	
+	LCD_clear();
+}
+
+void LCD_tick(void)
+{
+	If0_01secPassed = 1u;
+}
+
+void LCD_refresh()
+{
+	if (AppState == TIME_COUNTER_STATE)
+	{
+		if (if_tc_entry)
+		{
+			LCD_clear();
+			start_time_measurement();
+			if_tc_entry = 0u;
+		}
+		else
+		{
+			// TIME_COUNTER_STATE NORMAL OPERATION
+			if(If0_01secPassed)
+			{
+				display_time(get_current_time());
+				// clear time increment flag
+				If0_01secPassed = 0u;
+			}
+		}
+		
+	}
+	else	// if AppState == ADC_STATE
+	{
+		if (if_adc_entry)
+		{
+			LCD_clear();
+			stop_time_measurement();
+			if_adc_entry = 0u;
+		}
+		else
+		{
+			// ADC_STATE NORMAL OPERATION
+			LCD_putsub("ADC state");
+		}
+	}
+
+}
+
+void LCD_switch_state()
+{
+	if (AppState == ADC_STATE)
+	{
+		if_tc_entry = 1u;
+		AppState = TIME_COUNTER_STATE;
+	}
+	else
+	{
+		if_adc_entry = 1u;
+		AppState = ADC_STATE;
+	}
+}
+
+state_t LCD_get_state(void)
+{
+	return AppState;
 }
