@@ -109,6 +109,12 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ADC.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="ADC.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="button.c">
       <SubType>compile</SubType>
     </Compile>
@@ -137,6 +143,18 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="main.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="reed.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="reed.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="STM.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="STM.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>

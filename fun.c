@@ -50,7 +50,7 @@ ISR ( TIMER2_COMP_vect, ISR_BLOCK )
 	{
 		TimeCounter ++;
 	}
-	LCD_tick();
+	STM_tick();
 	button_tick();
 	return;
 }

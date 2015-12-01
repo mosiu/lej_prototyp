@@ -9,14 +9,12 @@
 					
 
 
-typedef enum {
-	ADC_STATE,
-	TIME_COUNTER_STATE
-	} state_t;
 
 //********************** F U N K C J E ***********************
 
 void LCD_clear(void);
+
+void LCD_carriage_return(void);
 
 void LCD_newline(void);
 
@@ -35,21 +33,13 @@ Wyswietla liczbe 0 - 65535
 void  LCD_display_number(uint16_t liczba);
 
 /*
-To be called from SysTick ISR.
+Wyswietla ladnie sformatowany czas
 */
-void LCD_tick(void);
-
-/*
-To be called from main. Responsible for changing displayed time every 0.1s
-*/
-void LCD_refresh(void);
-
-/*
-Switches application state.
-*/
-void LCD_switch_state();
+void LCD_display_time(const uint16_t * time);
 
 
-state_t LCD_get_state(void);
+
+
+
 
 #endif // LCD_H_

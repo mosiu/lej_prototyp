@@ -6,8 +6,8 @@
  */
 
 
-#ifndef INCFILE1_H_
-#define INCFILE1_H_
+#ifndef BUTTON_H_
+#define BUTTON_H_
 
 void button_init(void);
 
@@ -15,4 +15,4 @@ void button_tick(void);
 
 void button_refresh(void);
 
-#endif /* INCFILE1_H_ */
+#endif /* BUTTON_H_ */

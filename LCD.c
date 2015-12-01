@@ -15,10 +15,7 @@ Definiuje znak w CGRAM na pozycji pos
 */
 void def_char(uint8_t pos, const uint8_t * char_tab);
 
-/*
-Wyswietla ladnie sformatowany czas
-*/
-void display_time(const uint16_t * time);
+
 
 typedef struct {
 	uint8_t a[8];
@@ -377,14 +374,10 @@ static const uint8_t large_digit_tab[10][32] = {
 
 static digit_t LargeDigit[10];
 
-state_t AppState = TIME_COUNTER_STATE;
 
 static volatile uint8_t Address = 0;	//zawsze adres pierwszego wolnego znaku LCD
 
-static uint8_t If0_01secPassed = 0u;
 
-static uint8_t if_tc_entry = 1u; // IMPORTANT!!
-static uint8_t if_adc_entry = 0u;
 
 
 void LCD_putsub(char* sub)
@@ -463,7 +456,7 @@ void  LCD_display_number(uint16_t number)
 }
 
 
-void display_time(const uint16_t * time)
+void LCD_display_time(const uint16_t * time)
 {
 	// we don't measure more than 99 sec.
 	uint16_t time_copy = (*time) % 10000;
@@ -546,65 +539,12 @@ void LCD_init(void)
 	LCD_clear();
 }
 
-void LCD_tick(void)
+void LCD_carriage_return(void)
 {
-	If0_01secPassed = 1u;
-}
-
-void LCD_refresh()
-{
-	if (AppState == TIME_COUNTER_STATE)
-	{
-		if (if_tc_entry)
-		{
-			LCD_clear();
-			start_time_measurement();
-			if_tc_entry = 0u;
-		}
+		if (Address >= 0x40)
+		{ Address = 0x40; }
 		else
-		{
-			// TIME_COUNTER_STATE NORMAL OPERATION
-			if(If0_01secPassed)
-			{
-				display_time(get_current_time());
-				// clear time increment flag
-				If0_01secPassed = 0u;
-			}
-		}
-		
-	}
-	else	// if AppState == ADC_STATE
-	{
-		if (if_adc_entry)
-		{
-			LCD_clear();
-			stop_time_measurement();
-			if_adc_entry = 0u;
-		}
-		else
-		{
-			// ADC_STATE NORMAL OPERATION
-			LCD_putsub("ADC state");
-		}
-	}
-
+		{ Address = 0x00; }
+		SET_ADDR(Address)
 }
 
-void LCD_switch_state()
-{
-	if (AppState == ADC_STATE)
-	{
-		if_tc_entry = 1u;
-		AppState = TIME_COUNTER_STATE;
-	}
-	else
-	{
-		if_adc_entry = 1u;
-		AppState = ADC_STATE;
-	}
-}
-
-state_t LCD_get_state(void)
-{
-	return AppState;
-}

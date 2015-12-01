@@ -7,6 +7,7 @@
 
 #include "button.h"
 #include "LCD.h"
+#include "STM.h"
 #include "fun.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -93,7 +94,7 @@ void button_tick(void)
 
 void button_action()
 {
-	LCD_switch_state();
+	STM_switch_superstate();
 }
 
 
