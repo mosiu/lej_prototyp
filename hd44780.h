@@ -11,6 +11,9 @@
   * $Id: hd44780_8h_source.html,v 1.1.1.4 2012/01/03 16:04:22 joerg_wunsch Exp $
   */
  
+ #ifndef HD44780_H_
+ #define HD44780_H_
+ 
 #include <avr/io.h>
 /*
 ***************************DECLARATIONS OF "hd44780.c" FUNCTIONS**********************************/
@@ -115,3 +118,6 @@
   */
  #define HD44780_DDADDR(addr) \
          (0x80 | ((addr) & 0x7f))
+
+
+#endif /* HD44780_H_ */

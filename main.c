@@ -4,6 +4,8 @@
  * Created: 11/1/2015 12:32:14 PM
  * Author : mosiu
  */ 
+#include "ADC.h"
+#include "STM.h"
 #include "LCD.h"
 #include "defines.h"
 #include <util/delay.h>
@@ -22,10 +24,16 @@ int main(void)
 	// wlacz przycisk
 	button_init();
 	
+	ADC_init();
+	
+	reed_init();
+	
+	STM_set_state(READY_STATE);
+	
     /* Replace with your application code */
     while (1) 
     {
-		LCD_refresh();
+		STM_refresh();
 		button_refresh();
     }
 }

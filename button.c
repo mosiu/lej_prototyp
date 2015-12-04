@@ -26,7 +26,7 @@ static uint8_t IfButtonReleased = 1u;
 /*
 Returns logical high if the button is pressed.
 */
-uint8_t button_poll(void);
+uint8_t if_button_pressed(void);
 
 void button_action();
 
@@ -53,7 +53,7 @@ void button_tick(void)
 	if (IfButtonReleased)
 	{
 		// FIRST TIME DETECTION
-		if(button_poll() && !(DebounceCounter))
+		if(if_button_pressed() && !(DebounceCounter))
 		{
 			DebounceCounter++;
 			return;
@@ -61,7 +61,7 @@ void button_tick(void)
 		
 		// FURTHER DETECTION
 		// if push already detected (DebounceCounter) and button still pressed (button_poll())
-		if(button_poll() && DebounceCounter)
+		if(if_button_pressed() && DebounceCounter)
 		{
 			// increment counter
 			DebounceCounter++;
@@ -83,7 +83,7 @@ void button_tick(void)
 	else	// if button pressed, until release
 	{
 		// wait for button release
-		if (!button_poll())
+		if (!if_button_pressed())
 		{
 			IfButtonReleased = 1u;	// mark release occurence
 		}
@@ -98,7 +98,7 @@ void button_action()
 }
 
 
-uint8_t button_poll(void)
+uint8_t if_button_pressed(void)
 {
 	return !(BUTTON_PIN & BUTTON_MASK);
 }

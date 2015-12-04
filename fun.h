@@ -4,11 +4,14 @@
 
 
 /*
-Ustawia TIMER2 pod katem "Timera systemowego" o czestotliwosci 122,5 Hz
+Sets TIMER2 to function as a time measurement unit
 */
 void init_timer (void);
 uint16_t* get_current_time(void);
 
+/*
+
+*/
 void start_time_measurement(void);
 void stop_time_measurement(void);
 

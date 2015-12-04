@@ -10,20 +10,27 @@
 #define STM_H_
 
 
+
 typedef enum {
 	ADC_STATE,
-	READY
+	READY_STATE,
+	DRINKING_STATE,
+	DISPLAY_STATE,
 } state_t;
 
 void STM_switch_superstate(void);
 
 state_t STM_get_state(void);
 
-void SMT_tick(void);
+void STM_tick(void);
+
+void STM_set_state(state_t state);
 
 /*
 To be called from main. Responsible for changing displayed time every 0.1s
 */
 void STM_refresh(void);
+
+void reed_init(void);
 
 #endif /* STM_H_ */
