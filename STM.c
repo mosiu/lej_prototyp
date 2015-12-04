@@ -14,8 +14,14 @@
 #define REED_DDR	DDRD
 #define REED_MASK	(1 << PD3)
 
-#define ADC_LOW_SWITCH_VALUE	20u
+#define LED_PORT	PORTC
+#define LED_DDR		DDRC
+#define LED_MASK	(1 << PC3)
+
+#define ADC_LOW_SWITCH_VALUE	16u
 #define ADC_HIGH_SWITCH_VALUE	130u
+
+#define LED_BLINK_LENGTH		25u		// measured in 1/100 sec
 
 static uint8_t if_ready_entry = 1u; // IMPORTANT!!
 static uint8_t if_adc_entry = 0u;
@@ -28,6 +34,9 @@ static uint8_t If0_1secPassed = 0u;
 state_t AppState = READY_STATE;
 
 uint8_t if_valve_open(void);
+
+void led_on();
+void led_off();
 
 void STM_switch_superstate(void)
 {
@@ -92,6 +101,7 @@ void STM_set_state(state_t state)
 
 void STM_refresh(void)
 {
+	static uint8_t led_counter;
 	switch(AppState)
 	{
 	case READY_STATE:
@@ -101,12 +111,9 @@ void STM_refresh(void)
 			LCD_clear();
 			LCD_putsub("Wez go \ndo buzi");
 		}
-		else
+		if (if_valve_open())
 		{
-			if (if_valve_open())
-			{
-				STM_set_state(DRINKING_STATE);
-			}
+			STM_set_state(DRINKING_STATE);
 		}
 		break;
 	case DRINKING_STATE:
@@ -116,33 +123,38 @@ void STM_refresh(void)
 			if_drinking_entry = 0u;
 			// place remaining entry code here
 		}
-		else
+		if (ADC_get_result() < ADC_LOW_SWITCH_VALUE)
 		{
-			if (ADC_get_result() < ADC_LOW_SWITCH_VALUE)
-			{
-				STM_set_state(DISPLAY_STATE);
-			}
-			// DRINKING_STATE NORMAL OPERATION
-			if (If0_01secPassed)
-			{
-				LCD_display_time(get_current_time());
-				If0_01secPassed = 0u;
-			}
+			STM_set_state(DISPLAY_STATE);
+		}
+		// DRINKING_STATE NORMAL OPERATION
+		if (If0_01secPassed)
+		{
+			LCD_display_time(get_current_time());
+			If0_01secPassed = 0u;
 		}
 		break;
 	case DISPLAY_STATE:
 		if (if_display_entry)
 		{
+			led_on();
+			led_counter = 0u;
 			LCD_display_time(get_current_time()); // drinking time end display
 			if_display_entry = 0u;
 		}
-		else
+		if (If0_01secPassed)
 		{
-			// poll the ADC (wait for the beer)
-			if ((ADC_get_result() > ADC_HIGH_SWITCH_VALUE) && ! if_valve_open())
+			led_counter ++;
+			if (led_counter >= LED_BLINK_LENGTH)
 			{
-				STM_set_state(READY_STATE);
+				led_off();
 			}
+		}
+		
+		// poll the ADC (wait for the beer)
+		if ((ADC_get_result() > ADC_HIGH_SWITCH_VALUE) && ! if_valve_open())
+		{
+			STM_set_state(READY_STATE);
 		}
 		break;
 	case ADC_STATE:
@@ -151,17 +163,15 @@ void STM_refresh(void)
 			LCD_clear();
 			if_adc_entry = 0u;
 		}
-		else
+		
+		// ADC_STATE NORMAL OPERATION
+		if (If0_01secPassed)
 		{
-			// ADC_STATE NORMAL OPERATION
-			if (If0_01secPassed)
-			{
-				LCD_carriage_return();
-				LCD_putsub("   ");
-				LCD_carriage_return();
-				LCD_display_number((uint16_t)ADC_get_result());
-				If0_01secPassed = 0u;
-			}
+			LCD_carriage_return();
+			LCD_putsub("   ");
+			LCD_carriage_return();
+			LCD_display_number((uint16_t)ADC_get_result());
+			If0_01secPassed = 0u;
 		}
 		break;
 	}
@@ -172,7 +182,23 @@ void reed_init(void)
 	// ddr to input
 	REED_DDR &= ~REED_MASK;
 	// to high via pull-up
-	REED_PORT |= REED_MASK; 
+	REED_PORT |= REED_MASK;
+}
+
+void led_init()
+{
+	LED_DDR |= LED_MASK;
+	LED_PORT |= LED_MASK;
+}
+
+void led_on()
+{
+	LED_PORT &= ~LED_MASK;
+}
+
+void led_off()
+{
+	LED_PORT |= LED_MASK;
 }
 
 uint8_t if_valve_open(void)

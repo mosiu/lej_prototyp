@@ -11,7 +11,6 @@
 #include <util/delay.h>
 #include "button.h"
 #include "fun.h"
-void led_init();
 
 int main(void)
 {
@@ -27,6 +26,8 @@ int main(void)
 	ADC_init();
 	
 	reed_init();
+	
+	led_init();
 	
 	STM_set_state(READY_STATE);
 	

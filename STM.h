@@ -26,6 +26,9 @@ void STM_tick(void);
 
 void STM_set_state(state_t state);
 
+
+void led_init();
+
 /*
 To be called from main. Responsible for changing displayed time every 0.1s
 */
