@@ -63,12 +63,12 @@ uint16_t* get_current_time(void)
 
 void start_time_measurement(void)
 {
-	TimeCounter = 0u;
 	CountingActivated = 1u;
 }
 
 void stop_time_measurement(void)
 {
+	TimeCounter = 0u;
 	CountingActivated = 0u;
 }
 

@@ -15,6 +15,7 @@ typedef enum {
 	ADC_STATE,
 	READY_STATE,
 	DRINKING_STATE,
+	VERIFICATION_STATE,
 	DISPLAY_STATE,
 } state_t;
 

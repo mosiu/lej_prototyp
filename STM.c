@@ -20,18 +20,22 @@
 
 #define ADC_LOW_SWITCH_VALUE	16u
 #define ADC_HIGH_SWITCH_VALUE	130u
+#define VERIFICATION_STATE_DURATION		7u
 
-#define LED_BLINK_LENGTH		25u		// measured in 1/100 sec
+#define LED_BLINK_LENGTH		100u		// measured in 1/100 sec
 
 static uint8_t if_ready_entry = 1u; // IMPORTANT!!
 static uint8_t if_adc_entry = 0u;
 static uint8_t if_drinking_entry = 0u;
 static uint8_t if_display_entry = 0u;
+static uint8_t if_verification_entry = 0u;
 
 static uint8_t If0_01secPassed = 0u;
 static uint8_t If0_1secPassed = 0u;
 
 state_t AppState = READY_STATE;
+
+static uint16_t VerifiedTime;
 
 uint8_t if_valve_open(void);
 
@@ -40,7 +44,7 @@ void led_off();
 
 void STM_switch_superstate(void)
 {
-	static state_t substate;
+	static state_t substate = READY_STATE;
 	if (AppState == ADC_STATE)
 	{
 		// no entry flag, the previous state is just continued, 
@@ -92,6 +96,10 @@ void STM_set_state(state_t state)
 		stop_time_measurement();
 		if_display_entry = 1u;
 		break;
+	case VERIFICATION_STATE:
+		if_verification_entry = 1u;
+		VerifiedTime = *get_current_time();
+		break;
 	case ADC_STATE:
 		if_adc_entry = 1u;
 		break;
@@ -102,6 +110,7 @@ void STM_set_state(state_t state)
 void STM_refresh(void)
 {
 	static uint8_t led_counter;
+	static uint8_t verification_counter;
 	switch(AppState)
 	{
 	case READY_STATE:
@@ -121,11 +130,12 @@ void STM_refresh(void)
 		{
 			LCD_clear();
 			if_drinking_entry = 0u;
+		//	led_off();
 			// place remaining entry code here
 		}
 		if (ADC_get_result() < ADC_LOW_SWITCH_VALUE)
 		{
-			STM_set_state(DISPLAY_STATE);
+			STM_set_state(VERIFICATION_STATE);
 		}
 		// DRINKING_STATE NORMAL OPERATION
 		if (If0_01secPassed)
@@ -134,12 +144,32 @@ void STM_refresh(void)
 			If0_01secPassed = 0u;
 		}
 		break;
+	case VERIFICATION_STATE:
+		if (if_verification_entry)	// start counting
+		{
+			verification_counter = 0u;
+			if_verification_entry = 0u;
+		}
+		if(If0_1secPassed)		// increment every 0,01 sec
+		{
+			verification_counter ++;
+			If0_1secPassed = 0u;
+		}
+		if (ADC_get_result() > ADC_LOW_SWITCH_VALUE)	// if the pressure doesn't remain low, continue counting
+		{
+			STM_set_state(DRINKING_STATE);
+		}
+		if(verification_counter >= VERIFICATION_STATE_DURATION)	// if after some time nothing happens, display verified value
+		{
+			STM_set_state(DISPLAY_STATE);
+		}
+		break;
 	case DISPLAY_STATE:
 		if (if_display_entry)
 		{
 			led_on();
 			led_counter = 0u;
-			LCD_display_time(get_current_time()); // drinking time end display
+			LCD_display_time(&VerifiedTime); // drinking time end display
 			if_display_entry = 0u;
 		}
 		if (If0_01secPassed)
@@ -149,6 +179,7 @@ void STM_refresh(void)
 			{
 				led_off();
 			}
+			If0_01secPassed = 0u;
 		}
 		
 		// poll the ADC (wait for the beer)
