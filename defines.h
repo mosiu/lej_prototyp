@@ -3,7 +3,7 @@ This part of header contains definitions that specify the way of LCD connection 
 */
 
 #define HD44780_RS	D, 1
-#define HD44780_RW	D, 2
+#define HD44780_RW	D, 3
 #define HD44780_E	D, 0
 #define HD44780_D4	D, 4
 

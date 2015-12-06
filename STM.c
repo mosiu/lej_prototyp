@@ -12,28 +12,32 @@
 #define REED_PORT	PORTD
 #define REED_PIN	PIND
 #define REED_DDR	DDRD
-#define REED_MASK	(1 << PD3)
+#define REED_MASK	(1 << PD2)
 
 #define LED_PORT	PORTC
 #define LED_DDR		DDRC
-#define LED_MASK	(1 << PC3)
+#define LED_MASK	(1 << PC5)
 
-#define ADC_LOW_SWITCH_VALUE	16u
+#define ADC_LOW_SWITCH_VALUE	19u
 #define ADC_HIGH_SWITCH_VALUE	130u
 
-#define LED_BLINK_LENGTH		25u		// measured in 1/100 sec
+#define LED_BLINK_LENGTH		100u		// measured in 1/100 sec
+#define VERIFICATION_LENGTH		50u
 
-static uint8_t if_ready_entry = 1u; // IMPORTANT!!
-static uint8_t if_adc_entry = 0u;
-static uint8_t if_drinking_entry = 0u;
-static uint8_t if_display_entry = 0u;
+static uint8_t state_is_new = 1u;
+
+static uint8_t verification_state_duration = 0u;
+static uint8_t led_flashing_duration = 0u;
 
 static uint8_t If0_01secPassed = 0u;
-static uint8_t If0_1secPassed = 0u;
 
-state_t AppState = READY_STATE;
+static uint16_t verified_time = 0u;
+
+static state_t AppState = READY_STATE;
 
 uint8_t if_valve_open(void);
+void clear_flags(void);
+void execute_state_entry(state_t state);
 
 void led_on();
 void led_off();
@@ -48,9 +52,7 @@ void STM_switch_superstate(void)
 		AppState = substate;
 	}
 	else
-	{
-		if_adc_entry = 1u;
-		
+	{		
 		substate = AppState; // remember previous state
 		AppState = ADC_STATE;
 	}
@@ -58,14 +60,7 @@ void STM_switch_superstate(void)
 
 void STM_tick(void)
 {
-	static uint8_t tick_counter = 0u;
 	If0_01secPassed = 1u;
-	tick_counter ++;
-	if (tick_counter == 10)
-	{
-		tick_counter = 0;
-		If0_1secPassed = 1u;
-	}
 }
 
 state_t STM_get_state(void)
@@ -79,73 +74,86 @@ state_t STM_get_state(void)
 // LCD operations need to be executed in main - that is, in STM_refresh.
 void STM_set_state(state_t state)
 {
+	state_is_new = 1u;
+	AppState = state;
+}
+
+void execute_state_entry(state_t state)
+{
 	switch(state)
 	{
-	case READY_STATE:
-		if_ready_entry = 1u;
-		break;
-	case DRINKING_STATE:
-		start_time_measurement();
-		if_drinking_entry = 1u;
-		break;
-	case DISPLAY_STATE:
-		stop_time_measurement();
-		if_display_entry = 1u;
-		break;
-	case ADC_STATE:
-		if_adc_entry = 1u;
-		break;
+		case READY_STATE:
+			LCD_clear();
+			LCD_putsub("Wez go \ndo buzi");
+			break;
+		case DRINKING_STATE:
+			led_on();
+			LCD_clear();
+			start_time_measurement();
+			break;
+		case VERIFICATION_STATE:
+			verified_time = *get_current_time();
+			LCD_display_time(&verified_time);
+			verification_state_duration = 0u;
+			break;
+		case DISPLAY_STATE:
+			stop_time_measurement();
+			//led_on();
+			led_flashing_duration = 0u;
+			//LCD_display_time(get_current_time()); // drinking time end display
+			break;
+		case ADC_STATE:
+			LCD_clear();
+			break;
 	}
-	AppState = state;
+	state_is_new = 0u;
 }
 
 void STM_refresh(void)
 {
-	static uint8_t led_counter;
+	if(state_is_new)
+	{
+		execute_state_entry(AppState);
+	}
+	
 	switch(AppState)
 	{
 	case READY_STATE:
-		if (if_ready_entry)
-		{
-			if_ready_entry = 0u;
-			LCD_clear();
-			LCD_putsub("Wez go \ndo buzi");
-		}
 		if (if_valve_open())
 		{
 			STM_set_state(DRINKING_STATE);
 		}
 		break;
 	case DRINKING_STATE:
-		if (if_drinking_entry)
-		{
-			LCD_clear();
-			if_drinking_entry = 0u;
-			// place remaining entry code here
-		}
 		if (ADC_get_result() < ADC_LOW_SWITCH_VALUE)
 		{
-			STM_set_state(DISPLAY_STATE);
+			STM_set_state(VERIFICATION_STATE);
 		}
-		// DRINKING_STATE NORMAL OPERATION
 		if (If0_01secPassed)
 		{
 			LCD_display_time(get_current_time());
-			If0_01secPassed = 0u;
+		}
+		break;
+		
+	case VERIFICATION_STATE:
+		if(If0_01secPassed)
+		{
+			verification_state_duration ++;
+		}
+		if(ADC_get_result() > ADC_LOW_SWITCH_VALUE)
+		{
+			AppState = DRINKING_STATE;	// don't execute drinking_state entry!
+		}
+		if(verification_state_duration >= VERIFICATION_LENGTH)
+		{
+			STM_set_state(DISPLAY_STATE);
 		}
 		break;
 	case DISPLAY_STATE:
-		if (if_display_entry)
-		{
-			led_on();
-			led_counter = 0u;
-			LCD_display_time(get_current_time()); // drinking time end display
-			if_display_entry = 0u;
-		}
 		if (If0_01secPassed)
 		{
-			led_counter ++;
-			if (led_counter >= LED_BLINK_LENGTH)
+			led_flashing_duration ++;
+			if (led_flashing_duration >= LED_BLINK_LENGTH)
 			{
 				led_off();
 			}
@@ -157,13 +165,7 @@ void STM_refresh(void)
 			STM_set_state(READY_STATE);
 		}
 		break;
-	case ADC_STATE:
-		if (if_adc_entry)
-		{
-			LCD_clear();
-			if_adc_entry = 0u;
-		}
-		
+	case ADC_STATE:		
 		// ADC_STATE NORMAL OPERATION
 		if (If0_01secPassed)
 		{
@@ -171,10 +173,16 @@ void STM_refresh(void)
 			LCD_putsub("   ");
 			LCD_carriage_return();
 			LCD_display_number((uint16_t)ADC_get_result());
-			If0_01secPassed = 0u;
 		}
 		break;
 	}
+	
+	clear_flags();
+}
+
+void clear_flags(void)
+{
+	If0_01secPassed = 0u;
 }
 
 void reed_init(void)

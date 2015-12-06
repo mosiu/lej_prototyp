@@ -15,6 +15,7 @@ typedef enum {
 	ADC_STATE,
 	READY_STATE,
 	DRINKING_STATE,
+	VERIFICATION_STATE,
 	DISPLAY_STATE,
 } state_t;
 
@@ -22,7 +23,7 @@ void STM_switch_superstate(void);
 
 state_t STM_get_state(void);
 
-void STM_tick(void);
+inline void STM_tick(void);
 
 void STM_set_state(state_t state);
 
