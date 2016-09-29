@@ -22,12 +22,14 @@
 #define ADC_HIGH_SWITCH_VALUE	130u
 
 #define LED_BLINK_LENGTH		100u		// measured in 1/100 sec
-#define VERIFICATION_LENGTH		50u
+
+#define VERIFICATION_LENGTH		80u
 
 static uint8_t state_is_new = 1u;
 
 static uint8_t verification_state_duration = 0u;
 static uint8_t led_flashing_duration = 0u;
+
 
 static uint8_t If0_01secPassed = 0u;
 
@@ -82,6 +84,7 @@ void execute_state_entry(state_t state)
 {
 	switch(state)
 	{
+
 		case READY_STATE:
 			LCD_clear();
 			LCD_putsub("Wez go \ndo buzi");
@@ -105,6 +108,7 @@ void execute_state_entry(state_t state)
 		case ADC_STATE:
 			LCD_clear();
 			break;
+
 	}
 	state_is_new = 0u;
 }
@@ -116,6 +120,7 @@ void STM_refresh(void)
 		execute_state_entry(AppState);
 	}
 	
+
 	switch(AppState)
 	{
 	case READY_STATE:
@@ -125,6 +130,7 @@ void STM_refresh(void)
 		}
 		break;
 	case DRINKING_STATE:
+
 		if (ADC_get_result() < ADC_LOW_SWITCH_VALUE)
 		{
 			STM_set_state(VERIFICATION_STATE);
@@ -143,6 +149,7 @@ void STM_refresh(void)
 		if(ADC_get_result() > ADC_LOW_SWITCH_VALUE)
 		{
 			AppState = DRINKING_STATE;	// don't execute drinking_state entry!
+
 		}
 		if(verification_state_duration >= VERIFICATION_LENGTH)
 		{
